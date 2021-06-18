@@ -1,7 +1,9 @@
 <?php
 use Silex\Application;
+use Pimple\ServiceProviderInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Ofat\SilexJWT\JWTAuth;
 
 // timezone
 date_default_timezone_set('America/Sao_Paulo');
@@ -9,7 +11,11 @@ date_default_timezone_set('America/Sao_Paulo');
 require_once __DIR__ . '/vendor/autoload.php';
  
 $app = new Silex\Application();
- 
+
+$app->register(new JWTAuth(),[
+  'jwt.secret' => '78124770aA.'
+]);
+
 $app['debug'] = true;
 
 error_reporting(E_ALL);
@@ -27,21 +33,25 @@ $app->options("{anything}", function () {
 
 /* Rotas */
 $app->post('/auth/login', function(Request $request) use ($app){
-    $query = $request->request->all();
+    $_POST = json_decode(file_get_contents("php://input"),true);
     
-    echo "<pre>";
-    print_r($request->request);
-    exit;
-  
-    return $app->json(array(
-      "username" => $dados['username'],
-      "email" => $dados['email'],
-      "token" => $token,
-      "nome" => $dados['nome'],
-      "role" => $dados['role'],
-      "tokenR" => $dados['tokenR']
-    ), 200);
-  
+    $username = $_POST['username'];
+    $password = $_POST['password'];
+
+    $token = $app['jwt_auth']->generateToken($username);
+
+    if($username == 'admin' && $password == 'admin') {
+      return $app->json(array(
+        "success" => true,
+        "auth" => true,
+        "token" => $token
+      ), 200);
+    } else {
+      return $app->json(array(
+        "success" => false,
+        "auth" => false
+      ), 200);
+    }
   })
   ->bind('login');
  
